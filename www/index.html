@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RemindMe — Tasks &amp; Reminders</title>
+  <meta name="description" content="RemindMe: an accessible to-do list with date and time reminders. Get alerted before deadlines, expiries and appointments, and have events auto-marked done when the time arrives.">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    // Apply the saved theme before first paint so there is no flash of the wrong theme.
+    (function () {
+      try {
+        var t = localStorage.getItem('rm.theme');
+        if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = t;
+      } catch (e) { /* storage unavailable — fall back to default theme */ }
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <img src="assets/app-icon.svg" alt="" width="32" height="32" class="brand-logo">
+        <span class="brand-name">RemindMe</span>
+        <span class="brand-tag">Tasks &amp; Reminders</span>
+      </div>
+      <div class="header-actions">
+        <button id="btn-notifications" class="icon-btn" type="button" title="Enable or check system notifications">
+          <span class="icon" aria-hidden="true"></span>
+          <span class="btn-label">Notifications</span>
+        </button>
+        <button id="btn-sound" class="icon-btn" type="button" aria-pressed="true" title="Mute or unmute reminder sounds">
+          <span class="icon" aria-hidden="true"></span>
+          <span class="btn-label">Sound on</span>
+        </button>
+        <button id="btn-theme" class="icon-btn" type="button" aria-pressed="false" title="Switch between light and dark theme">
+          <span class="icon" aria-hidden="true"></span>
+          <span class="btn-label">Theme</span>
+        </button>
+        <button id="btn-settings" class="icon-btn" type="button" title="Open settings">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+            <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span class="btn-label sr-only">Settings</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <section class="hero" aria-labelledby="page-title">
+      <h1 id="page-title">My Tasks &amp; Reminders</h1>
+      <p class="hero-sub">Never miss an expiry date, deadline or appointment again. RemindMe alerts you before the time you set — and marks the task done when the time arrives.</p>
+      <div class="hero-actions">
+        <button id="btn-new" class="btn btn-primary" type="button">
+          <span aria-hidden="true">＋</span> New event
+        </button>
+        <button id="btn-samples" class="btn btn-ghost" type="button">Load sample events</button>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Summary of your events">
+      <div class="stat">
+        <span class="stat-value" id="stat-pending">0</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-done">0</span>
+        <span class="stat-label">Done</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-due-today">0</span>
+        <span class="stat-label">Due today</span>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Search and filter">
+      <div class="search-wrap">
+        <label for="search" class="sr-only">Search events</label>
+        <input type="search" id="search" placeholder="Search events…" autocomplete="off">
+      </div>
+      <div class="filters" role="group" aria-label="Filter events by status">
+        <button class="filter-btn is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+        <button class="filter-btn" type="button" data-filter="pending" aria-pressed="false">Pending</button>
+        <button class="filter-btn" type="button" data-filter="overdue" aria-pressed="false">Overdue</button>
+        <button class="filter-btn" type="button" data-filter="done" aria-pressed="false">Done</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="list-heading">
+      <h2 id="list-heading" class="sr-only">Events list</h2>
+      <ul id="event-list" class="event-list"></ul>
+
+      <div id="empty-state" class="empty-state" hidden>
+        <p id="empty-message">No events yet.</p>
+        <button id="btn-samples-empty" class="btn btn-ghost" type="button">Load sample events</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer container">
+    <p>Shortcuts: press <kbd>N</kbd> for a new event, <kbd>/</kbd> to search. The desktop app reminds you even when the window is closed (see README). RemindMe v1.4.0</p>
+  </footer>
+
+  <!-- New / Edit event dialog -->
+  <dialog id="event-dialog" class="dialog" aria-labelledby="dialog-title">
+    <form id="event-form" novalidate>
+      <h2 id="dialog-title">New event</h2>
+      <div class="form-grid">
+        <div class="field field-full">
+          <label for="f-title">Event title <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="f-title" name="title" required maxlength="120" autocomplete="off">
+          <p class="field-error" id="f-title-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="f-date">Date <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="f-date" name="date" required inputmode="numeric" autocomplete="off" maxlength="10" placeholder="YYYY-MM-DD" aria-describedby="f-date-hint">
+          <p class="field-hint" id="f-date-hint">Format: YYYY-MM-DD, for example 2026-08-30.</p>
+          <p class="field-error" id="f-date-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="f-time">Time <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="f-time" name="time" required inputmode="numeric" autocomplete="off" maxlength="5" placeholder="HH:MM" aria-describedby="f-time-hint">
+          <p class="field-hint" id="f-time-hint">24-hour format: HH:MM, for example 09:30 or 17:45.</p>
+          <p class="field-error" id="f-time-error" hidden></p>
+        </div>
+        <div class="field">
+          <label for="f-category">Category</label>
+          <select id="f-category" name="category">
+            <option value="personal">Personal</option>
+            <option value="work">Work</option>
+            <option value="finance">Finance</option>
+            <option value="health">Health</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-remind">Remind me before</label>
+          <select id="f-remind" name="remind"></select>
+        </div>
+        <div class="field">
+          <label for="f-repeat">Repeat</label>
+          <select id="f-repeat" name="repeat">
+            <option value="none" selected>Does not repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+        <div class="field" id="repeat-custom-wrap" hidden>
+          <label for="f-repeat-every">Repeat every</label>
+          <div class="repeat-custom">
+            <input type="number" id="f-repeat-every" min="1" max="3650" step="1" value="30" inputmode="numeric">
+            <select id="f-repeat-unit" aria-label="Repeat period unit">
+              <option value="day">day(s)</option>
+              <option value="week">week(s)</option>
+              <option value="month">month(s)</option>
+              <option value="year">year(s)</option>
+            </select>
+          </div>
+          <p class="field-error" id="f-repeat-every-error" hidden></p>
+        </div>
+        <div class="field field-full">
+          <label for="f-notes">Notes (optional)</label>
+          <textarea id="f-notes" name="notes" rows="3" maxlength="1000"></textarea>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save event</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Reminder alert dialog -->
+  <dialog id="alert-dialog" class="dialog alert-dialog" aria-labelledby="alert-title" aria-describedby="alert-message">
+    <div class="alert-body">
+      <div class="alert-icon" aria-hidden="true">⏰</div>
+      <div>
+        <h2 id="alert-title">Reminder</h2>
+        <p id="alert-message"></p>
+        <p id="alert-meta" class="alert-meta"></p>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-primary" id="alert-gotit">Got it</button>
+      <button type="button" class="btn btn-ghost" id="alert-snooze5">Snooze 5 min</button>
+      <button type="button" class="btn btn-ghost" id="alert-snooze15">Snooze 15 min</button>
+      <button type="button" class="btn btn-ghost" id="alert-snooze60">Snooze 1 hour</button>
+    </div>
+  </dialog>
+
+  <!-- Settings dialog -->
+  <dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+    <h2 id="settings-title">Settings</h2>
+    <div class="settings-body">
+      <div class="setting-row">
+        <div>
+          <h3>Appearance</h3>
+          <p>Choose light, dark, or follow the system theme.</p>
+        </div>
+        <button id="btn-theme-toggle" class="btn btn-ghost" type="button" aria-pressed="false">System theme</button>
+      </div>
+      <div class="setting-row" id="autostart-row" hidden>
+        <div>
+          <h3>Start with Windows</h3>
+          <p>Starts quietly in the system tray when you sign in, so reminders are always on.</p>
+        </div>
+        <button id="btn-autostart" class="btn btn-ghost" type="button" aria-pressed="false">Off</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <h3>System notifications</h3>
+          <p id="notif-status">System notifications are off — you will still see in-app alerts while the app is open.</p>
+        </div>
+        <button id="btn-notif-enable" class="btn btn-ghost" type="button">Enable</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <h3>Reminder sounds</h3>
+          <p>Play a gentle chime when a reminder appears.</p>
+        </div>
+        <button id="btn-sound-toggle" class="btn btn-ghost" type="button" aria-pressed="true">On</button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <h3>Default reminder</h3>
+          <p>Used for new events. You can change it per event.</p>
+        </div>
+        <select id="set-default-remind" aria-label="Default reminder before new events"></select>
+      </div>
+      <div class="setting-row">
+        <div>
+          <h3>Data</h3>
+          <p>Back up or restore your events, or load the sample set.</p>
+        </div>
+        <div class="btn-row">
+          <button id="btn-export" class="btn btn-ghost" type="button">Export JSON</button>
+          <button id="btn-import" class="btn btn-ghost" type="button">Import JSON</button>
+          <button id="btn-clear-done" class="btn btn-danger-ghost" type="button">Clear completed</button>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-primary" data-close>Close</button>
+    </div>
+  </dialog>
+
+  <!-- Hidden file input used by Import JSON -->
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+
+  <!-- Live region: screen readers announce status messages here -->
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
