@@ -27,7 +27,7 @@
         "nsis",
         "portable"
       ],
-      "icon": "assets/icon.ico"
+      "icon": "www/assets/icon.ico"
     },
     "portable": {
       "artifactName": "RemindMe-Portable-${version}.exe"
