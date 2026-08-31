@@ -1,7 +1,7 @@
 {
   "name": "remindme",
   "productName": "RemindMe",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "An accessible to-do list with date and time reminders.",
   "main": "electron/main.js",
   "author": "You",

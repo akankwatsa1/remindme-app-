@@ -50,6 +50,37 @@
           </svg>
           <span class="btn-label sr-only">Settings</span>
         </button>
+        <button id="btn-menu" class="icon-btn" type="button" aria-expanded="false" aria-controls="customize-panel" title="Customize the app">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          <span class="btn-label">Customize</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Customize panel (top menu): theme, reminder sound, sound toggle -->
+    <div id="customize-panel" class="customize-panel" hidden aria-label="Customize options">
+      <div class="customize-row">
+        <div>
+          <h3>Appearance</h3>
+          <p>Light, dark, or follow your device theme.</p>
+        </div>
+        <button id="btn-theme-panel" class="btn btn-ghost" type="button" aria-pressed="false">System theme</button>
+      </div>
+      <div class="customize-row" id="ringtone-row" hidden>
+        <div>
+          <h3>Reminder sound</h3>
+          <p id="ringtone-status">Use your phone's ringtones for reminders.</p>
+        </div>
+        <button id="btn-ringtone" class="btn btn-ghost" type="button">Choose…</button>
+      </div>
+      <div class="customize-row">
+        <div>
+          <h3>Reminder sounds</h3>
+          <p>Play a sound when a reminder appears.</p>
+        </div>
+        <button id="btn-sound-panel" class="btn btn-ghost" type="button" aria-pressed="true">On</button>
       </div>
     </div>
   </header>
@@ -106,7 +137,7 @@
   </main>
 
   <footer class="app-footer container">
-    <p>Shortcuts: press <kbd>N</kbd> for a new event, <kbd>/</kbd> to search. The desktop app reminds you even when the window is closed (see README). RemindMe v1.4.0</p>
+    <p>Shortcuts: press <kbd>N</kbd> for a new event, <kbd>/</kbd> to search. The desktop app reminds you even when the window is closed (see README). RemindMe v1.5.0 · Powered by <a class="brand-link" href="https://remedialcorner.com" target="_blank" rel="noopener">Remedial Corner</a></p>
   </footer>
 
   <!-- New / Edit event dialog -->
@@ -120,16 +151,19 @@
           <p class="field-error" id="f-title-error" hidden></p>
         </div>
         <div class="field">
-          <label for="f-date">Date <span class="req" aria-hidden="true">*</span></label>
-          <input type="text" id="f-date" name="date" required inputmode="numeric" autocomplete="off" maxlength="10" placeholder="YYYY-MM-DD" aria-describedby="f-date-hint">
-          <p class="field-hint" id="f-date-hint">Format: YYYY-MM-DD, for example 2026-08-30.</p>
-          <p class="field-error" id="f-date-error" hidden></p>
+          <span class="field-label" id="f-date-label">Date <span class="req" aria-hidden="true">*</span></span>
+          <div class="select-group" role="group" aria-labelledby="f-date-label">
+            <select id="f-day" aria-label="Day"></select>
+            <select id="f-month" aria-label="Month"></select>
+            <select id="f-year" aria-label="Year"></select>
+          </div>
         </div>
         <div class="field">
-          <label for="f-time">Time <span class="req" aria-hidden="true">*</span></label>
-          <input type="text" id="f-time" name="time" required inputmode="numeric" autocomplete="off" maxlength="5" placeholder="HH:MM" aria-describedby="f-time-hint">
-          <p class="field-hint" id="f-time-hint">24-hour format: HH:MM, for example 09:30 or 17:45.</p>
-          <p class="field-error" id="f-time-error" hidden></p>
+          <span class="field-label" id="f-time-label">Time <span class="req" aria-hidden="true">*</span></span>
+          <div class="select-group" role="group" aria-labelledby="f-time-label">
+            <select id="f-hour" aria-label="Hour, 24-hour format"></select>
+            <select id="f-minute" aria-label="Minute"></select>
+          </div>
         </div>
         <div class="field">
           <label for="f-category">Category</label>
@@ -247,6 +281,12 @@
           <button id="btn-export" class="btn btn-ghost" type="button">Export JSON</button>
           <button id="btn-import" class="btn btn-ghost" type="button">Import JSON</button>
           <button id="btn-clear-done" class="btn btn-danger-ghost" type="button">Clear completed</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div>
+          <h3>About</h3>
+          <p>RemindMe v1.5.0 — an accessible tasks &amp; reminders app. Powered by <a class="brand-link" href="https://remedialcorner.com" target="_blank" rel="noopener">Remedial Corner</a>.</p>
         </div>
       </div>
     </div>

@@ -50,28 +50,94 @@ function fmtTime(d) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-/* Strict parsers for the text date/time fields (YYYY-MM-DD and HH:MM).
- * Plain text inputs are used instead of native date/time pickers because
- * native pickers split into hidden segments that make screen-reader
- * navigation "jump" between month/day/year and hour/minute. */
-function parseDateInput(v) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const dt = new Date(y, mo - 1, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
-  return { y: y, mo: mo, d: d };
+/* Date and time are chosen from dropdown selects (day/month/year, hour/minute).
+ * Selects are screen-reader friendly and work with the on-screen keyboard —
+ * no typing, no format errors, no cursor jumping. */
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function buildDateSelects() {
+  const daySel = $('#f-day');
+  const monthSel = $('#f-month');
+  const yearSel = $('#f-year');
+  daySel.textContent = '';
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement('option');
+    o.value = String(d);
+    o.textContent = String(d);
+    daySel.appendChild(o);
+  }
+  monthSel.textContent = '';
+  MONTH_NAMES.forEach(function (name, i) {
+    const o = document.createElement('option');
+    o.value = String(i + 1);
+    o.textContent = name;
+    monthSel.appendChild(o);
+  });
+  yearSel.textContent = '';
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear - 1; y <= currentYear + 10; y++) {
+    const o = document.createElement('option');
+    o.value = String(y);
+    o.textContent = String(y);
+    yearSel.appendChild(o);
+  }
 }
 
-function parseTimeInput(v) {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(v);
-  if (!m) return null;
-  const h = Number(m[1]);
-  const mi = Number(m[2]);
-  if (h > 23 || mi > 59) return null;
-  return { h: h, mi: mi };
+function buildTimeSelects() {
+  const hourSel = $('#f-hour');
+  const minuteSel = $('#f-minute');
+  hourSel.textContent = '';
+  for (let h = 0; h <= 23; h++) {
+    const o = document.createElement('option');
+    o.value = String(h);
+    o.textContent = pad2(h);
+    hourSel.appendChild(o);
+  }
+  minuteSel.textContent = '';
+  for (let m = 0; m <= 59; m++) {
+    const o = document.createElement('option');
+    o.value = String(m);
+    o.textContent = pad2(m);
+    minuteSel.appendChild(o);
+  }
+}
+
+function setDateSelects(date) {
+  $('#f-day').value = String(date.getDate());
+  $('#f-month').value = String(date.getMonth() + 1);
+  // Ensure the event's year is available when editing old events
+  const yearSel = $('#f-year');
+  const y = String(date.getFullYear());
+  if (!Array.from(yearSel.options).some(function (o) { return o.value === y; })) {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = y;
+    yearSel.appendChild(o);
+    const years = Array.from(yearSel.options).map(function (op) { return Number(op.value); }).sort(function (a, b) { return a - b; });
+    yearSel.textContent = '';
+    years.forEach(function (yv) {
+      const op = document.createElement('option');
+      op.value = String(yv);
+      op.textContent = String(yv);
+      yearSel.appendChild(op);
+    });
+  }
+  yearSel.value = y;
+}
+
+function setTimeSelects(date) {
+  $('#f-hour').value = String(date.getHours());
+  $('#f-minute').value = String(date.getMinutes());
+}
+
+function readDateSelects() {
+  return {
+    y: Number($('#f-year').value),
+    mo: Number($('#f-month').value),
+    d: Number($('#f-day').value),
+    h: Number($('#f-hour').value),
+    mi: Number($('#f-minute').value)
+  };
 }
 
 function iconHTML(name) {
@@ -122,7 +188,7 @@ let audioCtx = null;
 /* =========================================================
  *  Storage
  * =======================================================*/
-function defaultSettings() { return { theme: 'system', sound: true, defaultRemind: 60, notificationsRequested: false }; }
+function defaultSettings() { return { theme: 'system', sound: true, defaultRemind: 60, notificationsRequested: false, ringtone: null }; }
 
 function normalizeEvent(ev) {
   if (!ev || typeof ev !== 'object' || !ev.title || !ev.dueISO) return null;
@@ -312,6 +378,55 @@ function initNativeNotificationTap() {
   } catch (err) { /* listener unavailable */ }
 }
 
+/* ---------------------------------------------------------
+ *  Reminder sound (Android): pick a phone ringtone (native)
+ * -------------------------------------------------------*/
+function nativeReminderSound() {
+  try {
+    if (!isNativeApp() || !window.Capacitor || !window.Capacitor.Plugins) return null;
+    return window.Capacitor.Plugins.ReminderSound || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function initRingtoneUI() {
+  const row = $('#ringtone-row');
+  if (!isNativeApp() || !row) return;
+  row.hidden = false;
+  updateRingtoneStatus();
+  const btn = $('#btn-ringtone');
+  btn.addEventListener('click', function () {
+    const plugin = nativeReminderSound();
+    if (!plugin || typeof plugin.pick !== 'function') {
+      toast('Ringtone selection is not available here.');
+      return;
+    }
+    plugin.pick().then(function (res) {
+      if (res && res.uri) {
+        settings.ringtone = { name: res.name || 'Custom sound', uri: res.uri };
+        saveSettings();
+        updateRingtoneStatus();
+        toast('Reminder sound set to: ' + (res.name || 'Custom sound'));
+      }
+    }).catch(function (err) {
+      // cancelled by the user — not an error
+      if (err && err.message && err.message.indexOf('cancel') === -1) {
+        toast('Could not pick a ringtone.');
+      }
+    });
+  });
+}
+
+function updateRingtoneStatus() {
+  const statusEl = $('#ringtone-status');
+  if (!statusEl) return;
+  const r = settings.ringtone;
+  statusEl.textContent = r && r.name
+    ? 'Reminder sound: ' + r.name + '.'
+    : 'Use your phone\u2019s ringtones for reminders.';
+}
+
 /* =========================================================
  *  Theme & sound
  * =======================================================*/
@@ -350,6 +465,11 @@ function updateThemeButton() {
     settingsBtn.setAttribute('aria-pressed', String(dark));
     settingsBtn.textContent = label;
   }
+  const panelBtn = $('#btn-theme-panel');
+  if (panelBtn) {
+    panelBtn.setAttribute('aria-pressed', String(dark));
+    panelBtn.textContent = label;
+  }
 }
 
 function toggleSound() {
@@ -371,11 +491,24 @@ function updateSoundButton() {
     sbtn.setAttribute('aria-pressed', String(settings.sound));
     sbtn.textContent = settings.sound ? 'On' : 'Off';
   }
+  const pbtn = $('#btn-sound-panel');
+  if (pbtn) {
+    pbtn.setAttribute('aria-pressed', String(settings.sound));
+    pbtn.textContent = settings.sound ? 'On' : 'Off';
+  }
 }
 
-/* Gentle three-note chime (Web Audio — no sound files needed) */
+/* Gentle three-note chime (Web Audio — no sound files needed).
+ * On Android, if the user picked a phone ringtone, play that instead. */
 function playChime() {
   if (!settings.sound) return;
+  const rs = nativeReminderSound();
+  if (rs && settings.ringtone && settings.ringtone.uri && typeof rs.play === 'function') {
+    try {
+      rs.play();
+      return;
+    } catch (err) { /* fall back to the chime */ }
+  }
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -607,8 +740,8 @@ function openDialog(mode, id) {
     if (!ev) return;
     const due = new Date(ev.dueISO);
     $('#f-title').value = ev.title;
-    $('#f-date').value = toDateInput(due);
-    $('#f-time').value = toTimeInput(due);
+    setDateSelects(due);
+    setTimeSelects(due);
     $('#f-category').value = ev.category;
     $('#f-remind').value = ev.remindBeforeMin == null ? '' : String(ev.remindBeforeMin);
     $('#f-repeat').value = ev.repeat;
@@ -621,8 +754,8 @@ function openDialog(mode, id) {
     const now = new Date();
     now.setSeconds(0, 0);
     now.setMinutes(now.getMinutes() + 5 - (now.getMinutes() % 5));
-    $('#f-date').value = toDateInput(now);
-    $('#f-time').value = toTimeInput(now);
+    setDateSelects(now);
+    setTimeSelects(now);
   }
 
   updateCustomRepeatVisibility();
@@ -639,9 +772,11 @@ function updateCustomRepeatVisibility() {
 }
 
 function snapshotForm() {
+  const p = readDateSelects();
   return JSON.stringify([
-    $('#f-title').value, $('#f-date').value, $('#f-time').value,
-    $('#f-category').value, $('#f-remind').value, $('#f-repeat').value, $('#f-notes').value
+    $('#f-title').value, p.y, p.mo, p.d, p.h, p.mi,
+    $('#f-category').value, $('#f-remind').value, $('#f-repeat').value,
+    $('#f-repeat-every').value, $('#f-repeat-unit').value, $('#f-notes').value
   ]);
 }
 
@@ -669,30 +804,15 @@ function showFieldError(id, msg) {
 function validateAndCollect() {
   clearFieldErrors();
   const title = $('#f-title').value.trim();
-  const dateVal = $('#f-date').value.trim();
-  const timeVal = $('#f-time').value.trim();
   const errors = [];
 
   if (!title) errors.push(['f-title', 'Please enter a title for the event.']);
-  if (!dateVal) {
-    errors.push(['f-date', 'Please enter a date.']);
-  } else if (!parseDateInput(dateVal)) {
-    errors.push(['f-date', 'Enter the date as YYYY-MM-DD, for example 2026-08-30.']);
-  }
-  if (!timeVal) {
-    errors.push(['f-time', 'Please enter a time.']);
-  } else if (!parseTimeInput(timeVal)) {
-    errors.push(['f-time', 'Enter the time in 24-hour format as HH:MM, for example 09:30.']);
-  }
 
-  let due = null;
-  const dateParts = parseDateInput(dateVal);
-  const timeParts = parseTimeInput(timeVal);
-  if (dateParts && timeParts) {
-    due = new Date(dateParts.y, dateParts.mo - 1, dateParts.d, timeParts.h, timeParts.mi, 0, 0);
-    if (!editingId && due.getTime() <= Date.now()) {
-      errors.push(['f-time', 'Please choose a date and time in the future.']);
-    }
+  // Date/time come from dropdowns, so they are always well-formed.
+  const p = readDateSelects();
+  const due = new Date(p.y, p.mo - 1, p.d, p.h, p.mi, 0, 0);
+  if (!editingId && due.getTime() <= Date.now()) {
+    errors.push(['f-time', 'Please choose a date and time in the future.']);
   }
 
   const repeat = $('#f-repeat').value;
@@ -1245,9 +1365,32 @@ function bindEvents() {
   $('#btn-samples').addEventListener('click', loadSamples);
   $('#btn-samples-empty').addEventListener('click', loadSamples);
   $('#btn-theme').addEventListener('click', toggleTheme);
+  $('#btn-theme-toggle').addEventListener('click', toggleTheme);
+  $('#btn-theme-panel').addEventListener('click', toggleTheme);
   $('#btn-sound').addEventListener('click', toggleSound);
+  $('#btn-sound-toggle').addEventListener('click', toggleSound);
+  $('#btn-sound-panel').addEventListener('click', toggleSound);
   $('#btn-notifications').addEventListener('click', requestNotificationPermission);
   $('#btn-settings').addEventListener('click', function () { $('#settings-dialog').showModal(); });
+
+  // Customize panel (top menu)
+  const menuBtn = $('#btn-menu');
+  const panel = $('#customize-panel');
+  function setPanel(open) {
+    panel.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(!!open));
+    if (open) menuBtn.setAttribute('aria-pressed', 'true');
+    else menuBtn.removeAttribute('aria-pressed');
+  }
+  menuBtn.addEventListener('click', function () {
+    setPanel(panel.hidden);
+  });
+  document.addEventListener('click', function (e) {
+    if (!panel.hidden && !panel.contains(e.target) && !menuBtn.contains(e.target)) setPanel(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) setPanel(false);
+  });
 
   $('#event-form').addEventListener('submit', onSubmitForm);
   $('#f-repeat').addEventListener('change', updateCustomRepeatVisibility);
@@ -1349,10 +1492,13 @@ function init() {
   applyTheme(settings.theme);
 
   buildRemindSelect($('#set-default-remind'), settings.defaultRemind);
+  buildDateSelects();
+  buildTimeSelects();
   updateSoundButton();
   updateNotificationButton();
   initAutoStartUI();
   initNativeNotificationTap();
+  initRingtoneUI();
   bindEvents();
   renderAll();
   syncToPlatform();

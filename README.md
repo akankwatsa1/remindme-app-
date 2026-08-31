@@ -29,13 +29,13 @@ window is closed. See below.
 
 ---
 
-## How to package it as an installable app (already done — v1.3.0)
+## How to package it as an installable app (already done — v1.5.0)
 
 The Windows build is ready in `F:\remindme-app-dist\`:
 
 ```
-RemindMe Setup 1.3.0.exe              ← installer (double-click to install)
-RemindMe-Portable-1.3.0.exe           ← PORTABLE version — runs straight from a USB stick
+RemindMe Setup 1.5.0.exe              ← installer (double-click to install)
+RemindMe-Portable-1.5.0.exe           ← PORTABLE version — runs straight from a USB stick
 win-unpacked\RemindMe.exe             ← portable-unpacked version (no install needed)
 ```
 
@@ -84,13 +84,15 @@ no image tools needed.
 
 | Area | Details |
 | --- | --- |
-| Events | Title, date, time, category, notes, repeat (none / daily / weekly / monthly / yearly / custom — e.g. every 30 days) |
+| Events | Title, date, time, category, notes, repeat (none / daily / weekly / monthly / yearly / custom — e.g. every 30 days). **Date & time are friendly dropdowns** (day/month/year, hour/minute) — no typing needed |
 | Reminders | Advance notice from 1 day down to "at the due time", snooze (5/15/60 min), sound chime, system notifications |
 | Desktop app | System tray icon, close-to-tray, **reminders fire as Windows notifications even when the window is closed**, click a notification to open the event, **auto-start with Windows** |
+| Customize menu | Top menu: **theme toggle (Light / Dark / System)** and, on Android, **choose any phone ringtone** as the reminder sound |
+| Android app | Capacitor build via GitHub Actions; reminders scheduled with Android (fire when the app is closed); tap a notification to open the event |
 | Auto-done | Event is marked done when its date & time is reached (you can also tick it early, or reopen it if not repeating) |
-| Accessibility | Full keyboard support, ARIA live regions, accessible dialogs, focus management, high-contrast themes, reduced-motion support, **screen-reader-friendly plain text date/time fields (no cursor jumping)** |
+| Accessibility | Full keyboard support, ARIA live regions, accessible dialogs, focus management, high-contrast themes, reduced-motion support, screen-reader-friendly dropdown date/time pickers |
 | Data | Saved locally (localStorage) — **Export / Import JSON backup** included |
-| Extras | Search, filters (All/Pending/Overdue/Done), light & dark theme, keyboard shortcuts (`N` new event, `/` search), stats summary, sample events |
+| Extras | Search, filters (All/Pending/Overdue/Done), light & dark theme, keyboard shortcuts (`N` new event, `/` search), stats summary, sample events, **Powered by Remedial Corner** |
 
 ## Keyboard shortcuts
 
@@ -122,10 +124,14 @@ cloud by **GitHub Actions** whenever you push to this repository.
   (advance reminder + due alert), so they fire even when the app isn't open — tapping a
   notification opens that event. Notifications appear once you grant the permission the
   app asks for.
-- **Screen readers:** TalkBack reads the same semantic/ARIA structure — plain text
-  date/time fields (no jumping cursors), labelled controls, announced status messages.
-- **Dark theme:** the appearance button (and Settings → Appearance) cycles
+- **Screen readers:** TalkBack reads the same semantic/ARIA structure — labelled
+  dropdowns for date/time (no typing, no cursor jumping), announced status messages.
+- **Dark theme:** the **Customize** menu (and the header button / Settings) cycles
   **Light → Dark → System** — "System" follows your phone's dark-mode setting.
+- **Phone ringtones:** in the **Customize** menu, tap **Reminder sound → Choose…**
+  to pick any of your phone's ringtones for reminder alerts (Android).
+- **Branding:** the app footer and Settings → About carry the
+  **Powered by Remedial Corner** link (https://remedialcorner.com).
 
 Building locally (optional, needs the Android SDK):
 
