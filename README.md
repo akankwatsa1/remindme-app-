@@ -109,12 +109,39 @@ no image tools needed.
 - Every control has an accessible name (`aria-label`, `aria-pressed`, `title`)
 - WCAG-friendly contrast in both light and dark themes, `prefers-reduced-motion` respected
 
+## Android app (Capacitor + GitHub Actions)
+
+RemindMe also runs as a lightweight Android app. The APK is built automatically in the
+cloud by **GitHub Actions** whenever you push to this repository.
+
+- **Get the APK:** repo → **Actions** → *Build Android APK* → the run's **artifacts** →
+  download `remindme-apk` → `app-debug.apk` (already signed with the debug key).
+- **Install:** copy the APK to your phone (or open it from a browser download), allow
+  "install unknown apps" for the installer, and open it.
+- **Reminders when the app is closed:** notifications are scheduled with Android itself
+  (advance reminder + due alert), so they fire even when the app isn't open — tapping a
+  notification opens that event. Notifications appear once you grant the permission the
+  app asks for.
+- **Screen readers:** TalkBack reads the same semantic/ARIA structure — plain text
+  date/time fields (no jumping cursors), labelled controls, announced status messages.
+- **Dark theme:** the appearance button (and Settings → Appearance) cycles
+  **Light → Dark → System** — "System" follows your phone's dark-mode setting.
+
+Building locally (optional, needs the Android SDK):
+
+```bash
+npm install
+npx cap sync android
+cd android && ./gradlew assembleDebug   # APK in android/app/build/outputs/apk/debug/
+```
+
 ## Future ideas (roadmap)
 
 - All-day events and natural-language dates ("renew data every 30 days" as a plain sentence)
 - Cloud sync / multiple profiles
 - Calendar view and export to `.ics` (Google Calendar / Outlook)
 - Custom reminder sounds and priority levels
+- Play Store release (signed APK/AAB)
 - More languages
 
 ---
@@ -123,11 +150,15 @@ no image tools needed.
 
 ```
 remindme-app/
-├── index.html          # the app UI (semantic + ARIA)
-├── css/styles.css      # styling, light/dark themes
-├── js/app.js           # all app logic (reminder engine, storage, a11y)
-├── assets/             # app icon: app-icon.svg/.png + icon.ico (Windows)
-├── scripts/make-icon.js# regenerates the icon files (pure Node, no deps)
-├── electron/main.js    # Electron desktop wrapper (for packaging)
-└── package.json        # Electron + electron-builder config
+├── www/                # the web app (UI + logic), shared by all platforms
+│   ├── index.html      #   semantic + ARIA markup
+│   ├── css/styles.css  #   styling, light/dark/system themes
+│   ├── js/app.js       #   reminder engine, storage, platform bridges, a11y
+│   └── assets/         #   app-icon.svg/.png, icon.ico, tray.ico
+├── android/            # Capacitor Android project (built by GitHub Actions)
+├── electron/           # Electron desktop wrapper (tray, auto-start, notifications)
+├── scripts/make-icon.js# regenerates all icons (pure Node, no deps)
+├── .github/workflows/build-apk.yml  # builds the APK in GitHub Actions
+├── capacitor.config.ts # Capacitor configuration (webDir: www)
+└── package.json        # Electron + Capacitor + electron-builder config
 ```
